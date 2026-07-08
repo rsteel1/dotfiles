@@ -24,7 +24,7 @@ need_cmd fzf  || install_apt fzf
 
 echo "[2/6] Install Oh My Zsh (once)"
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
-  RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+  RUNZSH=no CHSH=yes KEEP_ZSHRC=yes \
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
