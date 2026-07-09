@@ -4,18 +4,27 @@ ZSH_THEME=""
 plugins=(git bazel zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-fzf-history-search)
 
 # Keep init idempotent so `source ~/.zshrc` does not re-wrap ZLE widgets.
+# Imported env can contain stale "loaded" flags without OMZ/OMP functions.
+if [[ -n "${DOTFILES_OMZ_LOADED:-}" ]] && [[ -z "${functions[omz]:-}" ]]; then
+    unset DOTFILES_OMZ_LOADED
+fi
+
 if [[ -z "${DOTFILES_OMZ_LOADED:-}" ]]; then
     source "$ZSH/oh-my-zsh.sh"
-    export DOTFILES_OMZ_LOADED=1
+    typeset -g DOTFILES_OMZ_LOADED=1
 fi
 
 if [[ -n "${commands[bazelisk]:-}" ]] && [[ -n "${functions[_bazel]:-}" ]]; then
     compdef _bazel bazelisk
 fi
 
+if [[ -n "${DOTFILES_OMP_LOADED:-}" ]] && [[ -z "${functions[set_poshcontext]:-}" ]]; then
+    unset DOTFILES_OMP_LOADED
+fi
+
 if [[ -z "${DOTFILES_OMP_LOADED:-}" ]] && command -v oh-my-posh >/dev/null 2>&1; then
     eval "$(oh-my-posh init zsh)"
-    export DOTFILES_OMP_LOADED=1
+    typeset -g DOTFILES_OMP_LOADED=1
 fi
 
 if command -v aa-status &>/dev/null && aa-status 2>/dev/null | grep -q "tcpdump"; then
