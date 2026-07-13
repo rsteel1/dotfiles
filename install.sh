@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dotfiles}"
+DOTFILES_DIR="${DOTFILES_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
 need_cmd() { command -v "$1" >/dev/null 2>&1; }
@@ -35,7 +35,9 @@ if ! need_cmd oh-my-posh; then
 fi
 
 echo "[4/6] Link zsh dotfiles"
+mkdir -p "$HOME/.config/oh-my-posh"
 ln -snf "$DOTFILES_DIR/zsh/.zshrc" "$HOME/.zshrc"
+ln -snf "$DOTFILES_DIR/zsh/config.omp.json" "$HOME/.config/oh-my-posh/config.json"
 [[ -f "$DOTFILES_DIR/zsh/.zprofile" ]] && ln -snf "$DOTFILES_DIR/zsh/.zprofile" "$HOME/.zprofile"
 
 echo "[5/6] Install Oh My Zsh plugins (once)"

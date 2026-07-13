@@ -1,5 +1,6 @@
 export PATH="$HOME/go/bin:/snap/bin:$HOME/.local/bin:$PATH"
 export ZSH="$HOME/.oh-my-zsh"
+export DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
 ZSH_THEME=""
 plugins=(git bazel zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-fzf-history-search)
 
@@ -23,7 +24,8 @@ if [[ -n "${DOTFILES_OMP_LOADED:-}" ]] && [[ -z "${functions[set_poshcontext]:-}
 fi
 
 if [[ -z "${DOTFILES_OMP_LOADED:-}" ]] && command -v oh-my-posh >/dev/null 2>&1; then
-    eval "$(oh-my-posh init zsh)"
+    export POSH_CONFIG_FILE="${DOTFILES_DIR:-.}/zsh/config.omp.json"
+    eval "$(oh-my-posh init zsh --config "$POSH_CONFIG_FILE")"
     typeset -g DOTFILES_OMP_LOADED=1
 fi
 
