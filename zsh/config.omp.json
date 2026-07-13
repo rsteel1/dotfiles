@@ -15,7 +15,7 @@
     "background": "transparent"
   },
   "transient_prompt": {
-    "template": "<p:yellow,transparent></><,p:yellow> {{ .FullPath }} </><p:yellow,transparent></> ",
+    "template": "<p:yellow,transparent></><,p:yellow> {{ .Path }} </><p:yellow,transparent></> ",
     "foreground": "p:black",
     "background": "transparent"
   },
@@ -35,7 +35,7 @@
           "options": {
             "style": "full"
           },
-          "template": "  {{ .FullPath }} ",
+          "template": "  {{ .Path }} ",
           "foreground": "p:white",
           "powerline_symbol": "",
           "background": "p:orange",
