@@ -1,8 +1,40 @@
 export PATH="$HOME/go/bin:/snap/bin:$HOME/.local/bin:$PATH"
 export ZSH="$HOME/.oh-my-zsh"
-export DOTFILES_DIR="${DOTFILES_DIR:-$HOME/dotfiles}"
+# Auto-detect dotfiles dir (handles devcontainers + symlinks + copied files)
+if [[ -z "${DOTFILES_DIR:-}" ]]; then
+    # Try sourced script location first (works even if copied)
+    local zshrc_path="${(%):-%x}"
+    if [[ -n "$zshrc_path" ]] && [[ -f "$zshrc_path" ]]; then
+        export DOTFILES_DIR="$(cd "$(dirname "$zshrc_path")/.." && pwd)"
+    # Fallback: try symlink resolution
+    elif [[ -L "$HOME/.zshrc" ]]; then
+        export DOTFILES_DIR="$(cd "$(dirname "$(readlink -f "$HOME/.zshrc")")/.." && pwd)"
+    # Last resort: default location
+    else
+        export DOTFILES_DIR="$HOME/dotfiles"
+    fi
+fi
 ZSH_THEME=""
-plugins=(git bazel zsh-autosuggestions zsh-syntax-highlighting zsh-completions zsh-fzf-history-search)
+plugins=(
+  git
+  bazel
+  z
+  sudo
+  extract
+  copypath
+  aliases
+  docker
+  docker-compose
+  python
+  rust
+  tmux
+  git-auto-fetch
+  web-search
+  zsh-autosuggestions
+  zsh-syntax-highlighting
+  zsh-completions
+  zsh-fzf-history-search
+)
 
 # Keep init idempotent so `source ~/.zshrc` does not re-wrap ZLE widgets.
 # Imported env can contain stale "loaded" flags without OMZ/OMP functions.
