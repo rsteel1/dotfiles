@@ -2,13 +2,13 @@ export PATH="$HOME/go/bin:/snap/bin:$HOME/.local/bin:$PATH"
 export ZSH="$HOME/.oh-my-zsh"
 # Auto-detect dotfiles dir (handles devcontainers + symlinks + copied files)
 if [[ -z "${DOTFILES_DIR:-}" ]]; then
-    # Try sourced script location first (works even if copied)
     local zshrc_path="${(%):-%x}"
-    if [[ -n "$zshrc_path" ]] && [[ -f "$zshrc_path" ]]; then
-        export DOTFILES_DIR="$(cd "$(dirname "$zshrc_path")/.." && pwd)"
-    # Fallback: try symlink resolution
-    elif [[ -L "$HOME/.zshrc" ]]; then
+    # Try symlink resolution first
+    if [[ -L "$HOME/.zshrc" ]]; then
         export DOTFILES_DIR="$(cd "$(dirname "$(readlink -f "$HOME/.zshrc")")/.." && pwd)"
+    # Fallback: Try sourced script location (works even if copied)
+    elif [[ -n "$zshrc_path" ]] && [[ -f "$zshrc_path" ]]; then
+        export DOTFILES_DIR="$(cd "$(dirname "$zshrc_path")/.." && pwd)"
     # Last resort: default location
     else
         export DOTFILES_DIR="$HOME/dotfiles"
@@ -69,3 +69,15 @@ fi
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Persistent history (devcontainer s-core-local feature uses /commandhistory)
+if [[ -d /commandhistory ]]; then
+    export HISTFILE=/commandhistory/.zsh_history
+else
+    export HISTFILE="$HOME/.zsh_history"
+fi
+export HISTSIZE=50000
+export SAVEHIST=50000
+setopt SHARE_HISTORY
+setopt HIST_IGNORE_DUPS
+setopt HIST_IGNORE_SPACE

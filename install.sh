@@ -21,6 +21,7 @@ need_cmd zsh  || install_apt zsh
 need_cmd git  || install_apt git
 need_cmd curl || install_apt curl
 need_cmd fzf  || install_apt fzf
+need_cmd tmux || install_apt tmux
 
 echo "[2/6] Install Oh My Zsh (once)"
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
