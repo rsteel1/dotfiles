@@ -81,3 +81,38 @@ export SAVEHIST=50000
 setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
+
+# Functions
+
+update-repos() {
+    local updated=()
+    local skipped_dirty=()
+    local skipped_conflict=()
+
+    echo "Scanning for repos (maxdepth 3)..."
+
+    find . -maxdepth 3 -name .git -type d | while read gitdir; do
+    repo=$(dirname "$gitdir")
+    echo "\nChecking $repo"
+
+    if git -C "$repo" diff-index --quiet HEAD 2>/dev/null; then
+        if git -C "$repo" pull --ff-only 2>&1; then
+        echo "  ✓ Updated"
+        updated+=("$repo")
+        else
+        echo "  ⚠️  Can't fast-forward"
+        skipped_conflict+=("$repo")
+        fi
+    else
+        echo "  ⚠️  Uncommitted changes, skipped"
+        skipped_dirty+=("$repo")
+    fi
+    done
+
+    echo "\n--- Summary ---"
+    echo "Updated: ${#updated[@]}"
+    echo "Skipped (dirty): ${#skipped_dirty[@]}"
+    [ ${#skipped_dirty[@]} -gt 0 ] && printf '  %s\n' "${skipped_dirty[@]}"
+    echo "Skipped (conflict): ${#skipped_conflict[@]}"
+    [ ${#skipped_conflict[@]} -gt 0 ] && printf '  %s\n' "${skipped_conflict[@]}"
+}
