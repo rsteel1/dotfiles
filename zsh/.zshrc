@@ -116,3 +116,25 @@ update-repos() {
     echo "Skipped (conflict): ${#skipped_conflict[@]}"
     [ ${#skipped_conflict[@]} -gt 0 ] && printf '  %s\n' "${skipped_conflict[@]}"
 }
+
+ghe() { 
+    gh browse --repo eclipse/"${1:-.}" 
+}
+
+ghea() { 
+    gh browse --repo etas-contrib/"${1:-.}" 
+}
+
+docs() {
+    local repo="${1:-.}"
+    if [[ "$repo" == "." ]]; then
+      repo=$(basename "$(pwd)" 2>/dev/null)
+    fi
+    wslview "https://eclipse-score.github.io/$repo/main/"
+  }
+
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
