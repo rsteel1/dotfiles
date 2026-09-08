@@ -14,7 +14,8 @@
     "foreground": "p:white",
     "background": "transparent"
   },
-  "console_title_template": "{{ .Shell }} in {{ .Folder }}",
+  "console_title_template": "{{ .PWD }}",
+  "enable_cursor_positioning": true,
   "blocks": [
     {
       "type": "prompt",
