@@ -259,6 +259,10 @@ build-sdk-prod() {
     echo "SDK deployed: $prod_mvp"
 }
 
+# QNX SDP 8.0
+export QNX_SDP_PATH="$HOME/qnx800"
+export QNX_LICENSE_PATH="$HOME/.qnx/license"
+
 # pyenv
 if command -v pyenv >/dev/null 2>&1; then
     export PYENV_ROOT="$HOME/.pyenv"
@@ -266,5 +270,6 @@ if command -v pyenv >/dev/null 2>&1; then
     eval "$(pyenv init --path)"
     eval "$(pyenv init -)"
 fi
-export CDPATH=".:$HOME/repos/eclipse/score"
+# CDPATH breaks scripts using $(cd ... && pwd) command substitution
+# export CDPATH=".:$HOME/repos/eclipse/score"
 alias refresh-cc='bazel-compile-commands --targets //... && ~/bin/fix-compile-commands.sh'
