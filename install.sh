@@ -74,7 +74,7 @@ echo "[3/7] Install oh-my-posh (once)"
 mkdir -p "$HOME/.local/bin"
 if ! need_cmd oh-my-posh; then
   if [[ "$OS" == Darwin ]]; then
-    brew install jandedobbeleer/oh-my-posh/oh-my-posh
+    brew install oh-my-posh
   else
     curl -fsSL https://ohmyposh.dev/install.sh | bash -s -- -d "$HOME/.local/bin"
   fi
