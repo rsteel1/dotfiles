@@ -1,14 +1,24 @@
-export PATH="$HOME/go/bin:/snap/bin:$HOME/.local/bin:$PATH"
+# Homebrew (macOS: Apple Silicon or Intel; Linux: linuxbrew)
+for _brew in /opt/homebrew/bin/brew /usr/local/bin/brew /home/linuxbrew/.linuxbrew/bin/brew; do
+    [[ -x "$_brew" ]] && { eval "$("$_brew" shellenv)"; break; }
+done
+unset _brew
+
+typeset -U path
+path=("$HOME/go/bin" "$HOME/.local/bin" $path)
+[[ -d /snap/bin ]] && path+=(/snap/bin)
+export PATH
+
 export ZSH="$HOME/.oh-my-zsh"
 # Auto-detect dotfiles dir (handles devcontainers + symlinks + copied files)
 if [[ -z "${DOTFILES_DIR:-}" ]]; then
     local zshrc_path="${(%):-%x}"
     # Try symlink resolution first
     if [[ -L "$HOME/.zshrc" ]]; then
-        export DOTFILES_DIR="$(cd "$(dirname "$(readlink -f "$HOME/.zshrc")")/.." && pwd)"
+        export DOTFILES_DIR="${${:-$HOME/.zshrc}:A:h:h}"
     # Fallback: Try sourced script location (works even if copied)
     elif [[ -n "$zshrc_path" ]] && [[ -f "$zshrc_path" ]]; then
-        export DOTFILES_DIR="$(cd "$(dirname "$zshrc_path")/.." && pwd)"
+        export DOTFILES_DIR="${zshrc_path:A:h:h}"
     # Last resort: default location
     else
         export DOTFILES_DIR="$HOME/dotfiles"
@@ -17,7 +27,6 @@ fi
 ZSH_THEME=""
 plugins=(
   git
-  bazel
   z
   sudo
   extract
@@ -35,6 +44,7 @@ plugins=(
   zsh-completions
   zsh-fzf-history-search
 )
+(( $+commands[bazel] || $+commands[bazelisk] )) && plugins+=(bazel)
 
 # Keep init idempotent so `source ~/.zshrc` does not re-wrap ZLE widgets.
 # Imported env can contain stale "loaded" flags without OMZ/OMP functions.
@@ -61,23 +71,18 @@ if [[ -z "${DOTFILES_OMP_LOADED:-}" ]] && command -v oh-my-posh >/dev/null 2>&1;
     typeset -g DOTFILES_OMP_LOADED=1
 fi
 
-# Windows Terminal tab title (WSL workaround)
+# Terminal tab title = cwd
 precmd_wt_title() {
     print -Pn "\e]0;%~\a"
 }
 # Only add once
 [[ -z ${precmd_functions[(r)precmd_wt_title]} ]] && precmd_functions+=(precmd_wt_title)
 
-if command -v aa-status &>/dev/null && aa-status 2>/dev/null | grep -q "tcpdump"; then
-    echo "[INFO] Setting tcpdump AppArmor profile to complain mode (allows writing to Bazel sandbox)..."
-    aa-complain /usr/bin/tcpdump 2>/dev/null || echo "[WARNING] Could not modify AppArmor profile"
-fi
-
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
-# Persistent history (devcontainer s-core-local feature uses /commandhistory)
+# Persistent history (devcontainers may mount /commandhistory)
 if [[ -d /commandhistory ]]; then
     export HISTFILE=/commandhistory/.zsh_history
 else
@@ -124,42 +129,7 @@ update-repos() {
     [ ${#skipped_conflict[@]} -gt 0 ] && printf '  %s\n' "${skipped_conflict[@]}"
 }
 
-ghe() {
-    local repo="${1:-.}"
-
-    if [[ "$repo" == "." ]]; then
-        # Use upstream if exists, else extract repo name from origin
-        if git remote get-url upstream &>/dev/null; then
-            gh browse --remote upstream
-        else
-            repo=$(basename "$(pwd)")
-            gh browse --repo eclipse-score/"$repo"
-        fi
-    else
-        gh browse --repo eclipse-score/"$repo"
-    fi
-}
-
-ghea() {
-    local repo="${1:-.}"
-
-    if [[ "$repo" == "." ]]; then
-        # Use origin, auto-detects etas-contrib or etas-eng
-        gh browse --remote origin
-    else
-        # Manual name: check if it has underscore (full name) or needs score_ prefix
-        [[ "$repo" != *"_"* ]] && repo="score_$repo"
-        gh browse --repo etas-contrib/"$repo"
-    fi
-}
-
 alias gho='gh browse'
-
-docs() {
-    local repo="${1:-.}"
-    [[ "$repo" == "." ]] && repo=$(basename "$(pwd)")
-    wslview "https://eclipse-score.github.io/$repo/main/"
-}
 
 retrigger-ci() {
     echo "Retriggering CI..."
@@ -200,69 +170,6 @@ retrigger-ci() {
     echo "✓ CI retriggered successfully, no trace left in history"
 }
 
-# Open VS Code workspace from ~/repos (matched by dir basename, falling back to substring match).
-# For score repos with no existing workspace file, auto-generate one that
-# bundles module_template/score/process_description alongside the repo.
-SCORE_ROOT="$HOME/repos/eclipse/score"
-SCORE_EXTRA_REPOS=(module_template score process_description)
-WORKSPACES_DIR="$HOME/repos"
-
-ws() {
-    local dir="${1:-.}"
-    local abs base ws
-    abs=$(realpath "$dir" 2>/dev/null) || abs="$dir"
-    base=$(basename "$abs")
-
-    if [[ -d "$WORKSPACES_DIR" ]]; then
-        ws="$WORKSPACES_DIR/$base.code-workspace"
-        [[ -f "$ws" ]] || ws=$(find "$WORKSPACES_DIR" -maxdepth 1 -iname "*$base*.code-workspace" -print -quit 2>/dev/null)
-    fi
-
-    if [[ -z "$ws" && "$abs" == "$SCORE_ROOT"/* ]]; then
-        mkdir -p "$WORKSPACES_DIR"
-        ws="$WORKSPACES_DIR/$base.code-workspace"
-        # Paths relative to workspace file location
-        local relpath=$(realpath --relative-to="$WORKSPACES_DIR" "$abs")
-        local folders="{\"path\":\"$relpath\"}"
-        for extra in "${SCORE_EXTRA_REPOS[@]}"; do
-            [[ "$extra" == "$base" ]] && continue
-            if [[ -d "$SCORE_ROOT/$extra" ]]; then
-                local extra_rel=$(realpath --relative-to="$WORKSPACES_DIR" "$SCORE_ROOT/$extra")
-                folders+=",{\"path\":\"$extra_rel\"}"
-            fi
-        done
-        printf '{"folders":[%s],"settings":{}}\n' "$folders" > "$ws"
-    fi
-
-    if [[ -n "$ws" && -f "$ws" ]]; then
-        command code "$ws" "${@:2}"
-    else
-        command code "$@"
-    fi
-}
-
-# Build ETAS SDK and deploy to prod_mvp
-build-sdk-prod() {
-    local arch="${1:-linux-x86_64}"
-    local ref_int="/home/str1yok/repos/etas/score/reference_integration"
-    local prod_mvp="/home/str1yok/repos/etas/vsps/prod_mvp/sdk/etas_vsps_gp"
-
-    echo "Building SDK for $arch..."
-    (cd "$ref_int" && ./etas/sdk/build_sdk_local.sh "$arch") || return 1
-
-    echo "Deploying to prod_mvp..."
-    mkdir -p "$prod_mvp"
-    # Remove SDK contents, preserve README.md and user files
-    rm -rf "$prod_mvp"/{BUILD.bazel,MODULE.bazel,bzl,metadata,include,lib,rlib,bin,examples,linux-*,qnx-*}
-    tar -xzf "$ref_int/artifacts/vsps_gp_sdk.tar.gz" -C "$prod_mvp"
-
-    echo "SDK deployed: $prod_mvp"
-}
-
-# QNX SDP 8.0
-export QNX_SDP_PATH="$HOME/qnx800"
-export QNX_LICENSE_PATH="$HOME/.qnx/license"
-
 # pyenv
 if command -v pyenv >/dev/null 2>&1; then
     export PYENV_ROOT="$HOME/.pyenv"
@@ -270,6 +177,6 @@ if command -v pyenv >/dev/null 2>&1; then
     eval "$(pyenv init --path)"
     eval "$(pyenv init -)"
 fi
-# CDPATH breaks scripts using $(cd ... && pwd) command substitution
-# export CDPATH=".:$HOME/repos/eclipse/score"
-alias refresh-cc='bazel-compile-commands --targets //... && ~/bin/fix-compile-commands.sh'
+
+# Machine-local overrides (untracked). Work machines: source "$DOTFILES_DIR/zsh/work.zsh" here.
+[[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
