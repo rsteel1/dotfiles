@@ -10,20 +10,16 @@ path=("$HOME/go/bin" "$HOME/.local/bin" $path)
 export PATH
 
 export ZSH="$HOME/.oh-my-zsh"
-# Auto-detect dotfiles dir (handles devcontainers + symlinks + copied files)
-if [[ -z "${DOTFILES_DIR:-}" ]]; then
-    local zshrc_path="${(%):-%x}"
-    # Try symlink resolution first
-    if [[ -L "$HOME/.zshrc" ]]; then
-        export DOTFILES_DIR="${${:-$HOME/.zshrc}:A:h:h}"
-    # Fallback: Try sourced script location (works even if copied)
-    elif [[ -n "$zshrc_path" ]] && [[ -f "$zshrc_path" ]]; then
-        export DOTFILES_DIR="${zshrc_path:A:h:h}"
-    # Last resort: default location
-    else
-        export DOTFILES_DIR="$HOME/dotfiles"
-    fi
-fi
+# Auto-detect dotfiles dir. Only accept a dir that actually contains the repo,
+# so a stale inherited DOTFILES_DIR or a copied ~/.zshrc can't point elsewhere.
+for _d in \
+    "${DOTFILES_DIR:-}" \
+    "${${:-$HOME/.zshrc}:A:h:h}" \
+    "${${(%):-%x}:A:h:h}" \
+    "$HOME/dotfiles"; do
+    [[ -n "$_d" && -f "$_d/zsh/.zshrc" ]] && { export DOTFILES_DIR="$_d"; break; }
+done
+unset _d
 ZSH_THEME=""
 plugins=(
   git
@@ -66,8 +62,16 @@ if [[ -n "${DOTFILES_OMP_LOADED:-}" ]] && [[ -z "${functions[set_poshcontext]:-}
 fi
 
 if [[ -z "${DOTFILES_OMP_LOADED:-}" ]] && command -v oh-my-posh >/dev/null 2>&1; then
-    export POSH_CONFIG_FILE="${DOTFILES_DIR:-.}/zsh/config.omp.json"
-    eval "$(oh-my-posh init zsh --config "$POSH_CONFIG_FILE")"
+    unset POSH_CONFIG_FILE
+    for _cfg in "${DOTFILES_DIR:-}/zsh/config.omp.json" "$HOME/.config/oh-my-posh/config.json"; do
+        [[ -f "$_cfg" ]] && { export POSH_CONFIG_FILE="$_cfg"; break; }
+    done
+    unset _cfg
+    if [[ -n "${POSH_CONFIG_FILE:-}" ]]; then
+        eval "$(oh-my-posh init zsh --config "$POSH_CONFIG_FILE")"
+    else
+        eval "$(oh-my-posh init zsh)"
+    fi
     typeset -g DOTFILES_OMP_LOADED=1
 fi
 
