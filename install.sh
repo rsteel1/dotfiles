@@ -109,6 +109,16 @@ link "$DOTFILES_DIR/zsh/config.omp.json" "$HOME/.config/oh-my-posh/config.json"
 [[ -f "$DOTFILES_DIR/zsh/.zprofile" ]] && link "$DOTFILES_DIR/zsh/.zprofile" "$HOME/.zprofile"
 
 echo "[6/7] Machine-local config"
+# Devcontainer images often ship zsh + oh-my-zsh but keep bash as login shell
+if [[ "$OS" == Linux ]] && need_cmd getent; then
+  zsh_path="$(command -v zsh)"
+  if [[ "$(getent passwd "$(id -un)" | cut -d: -f7)" != "$zsh_path" ]]; then
+    sudo -n chsh -s "$zsh_path" "$(id -un)" 2>/dev/null \
+      || chsh -s "$zsh_path" \
+      || echo "  WARNING: could not set zsh as login shell"
+  fi
+fi
+
 touch "$HOME/.zshrc.local"
 if [[ "$WORK" == 1 ]] && ! grep -q 'zsh/work.zsh' "$HOME/.zshrc.local"; then
   echo 'source "$DOTFILES_DIR/zsh/work.zsh"' >> "$HOME/.zshrc.local"
