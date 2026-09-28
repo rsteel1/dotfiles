@@ -63,6 +63,7 @@ need_cmd git  || install_pkg git
 need_cmd curl || install_pkg curl
 need_cmd fzf  || install_pkg fzf
 need_cmd tmux || install_pkg tmux
+[[ "$OS" == Linux ]] && { need_cmd unzip || install_pkg unzip; }  # oh-my-posh installer needs it
 
 echo "[2/7] Install Oh My Zsh (once)"
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
@@ -70,23 +71,7 @@ if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
     sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 fi
 
-echo "[3/7] Install oh-my-posh (once)"
-mkdir -p "$HOME/.local/bin"
-if ! need_cmd oh-my-posh; then
-  if [[ "$OS" == Darwin ]]; then
-    brew install oh-my-posh
-  else
-    curl -fsSL https://ohmyposh.dev/install.sh | bash -s -- -d "$HOME/.local/bin"
-  fi
-fi
-
-echo "[4/7] Link zsh dotfiles"
-mkdir -p "$HOME/.config/oh-my-posh"
-link "$DOTFILES_DIR/zsh/.zshrc" "$HOME/.zshrc"
-link "$DOTFILES_DIR/zsh/config.omp.json" "$HOME/.config/oh-my-posh/config.json"
-[[ -f "$DOTFILES_DIR/zsh/.zprofile" ]] && link "$DOTFILES_DIR/zsh/.zprofile" "$HOME/.zprofile"
-
-echo "[5/7] Install Oh My Zsh plugins (once)"
+echo "[3/7] Install Oh My Zsh plugins (once)"
 mkdir -p "$ZSH_CUSTOM/plugins"
 
 [[ -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]] || \
@@ -104,6 +89,24 @@ mkdir -p "$ZSH_CUSTOM/plugins"
 [[ -d "$ZSH_CUSTOM/plugins/zsh-fzf-history-search" ]] || \
   git clone --depth=1 https://github.com/joshskidmore/zsh-fzf-history-search \
     "$ZSH_CUSTOM/plugins/zsh-fzf-history-search"
+
+# Optional: a failure here shouldn't abort the rest of the setup
+echo "[4/7] Install oh-my-posh (once)"
+mkdir -p "$HOME/.local/bin"
+if ! need_cmd oh-my-posh; then
+  if [[ "$OS" == Darwin ]]; then
+    brew install oh-my-posh || echo "  WARNING: oh-my-posh install failed"
+  else
+    curl -fsSL https://ohmyposh.dev/install.sh | bash -s -- -d "$HOME/.local/bin" \
+      || echo "  WARNING: oh-my-posh install failed"
+  fi
+fi
+
+echo "[5/7] Link zsh dotfiles"
+mkdir -p "$HOME/.config/oh-my-posh"
+link "$DOTFILES_DIR/zsh/.zshrc" "$HOME/.zshrc"
+link "$DOTFILES_DIR/zsh/config.omp.json" "$HOME/.config/oh-my-posh/config.json"
+[[ -f "$DOTFILES_DIR/zsh/.zprofile" ]] && link "$DOTFILES_DIR/zsh/.zprofile" "$HOME/.zprofile"
 
 echo "[6/7] Machine-local config"
 touch "$HOME/.zshrc.local"
